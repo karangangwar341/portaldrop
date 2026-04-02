@@ -1,0 +1,97 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// PortalDrop — Prisma Schema
+//
+// HOW TO USE:
+//   1. Copy your connection string from console.prisma.io into .env
+//      DATABASE_URL="postgres://..."
+//   2. Run:  npx prisma db push      (creates tables, no migration files)
+//      OR:   npx prisma migrate dev  (creates migration files — recommended for prod)
+//   3. Run:  npx prisma generate     (generates the Prisma Client)
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Reads from .env → DATABASE_URL
+  // For Prisma Accelerate (connection pooling), use the accelerate URL here
+  // and the direct URL for migrations:
+  url       = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")   // uncomment when using Prisma Accelerate
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  displayName  String
+  avatarColor  String
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  sessions         Session[]
+  transfersSent     TransferRecord[] @relation("SentTransfers")
+  transfersReceived TransferRecord[] @relation("ReceivedTransfers")
+  rooms            Room[]           @relation("UserRooms")
+
+  @@map("users")
+}
+
+// ─── Sessions ─────────────────────────────────────────────────────────────────
+
+model Session {
+  token     String   @id @default(uuid())
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// ─── Transfer History ─────────────────────────────────────────────────────────
+
+model TransferRecord {
+  id         String   @id @default(uuid())
+  direction  String   // "sent" | "received"
+  fileName   String
+  fileSize   BigInt
+  fileType   String
+  peerName   String
+  roomId     String
+  status     String   // "complete" | "error" | "interrupted"
+  durationMs Int?
+  timestamp  DateTime @default(now())
+
+  sentById     String?
+  receivedById String?
+
+  sentBy     User? @relation("SentTransfers",     fields: [sentById],     references: [id], onDelete: SetNull)
+  receivedBy User? @relation("ReceivedTransfers", fields: [receivedById], references: [id], onDelete: SetNull)
+
+  @@index([sentById])
+  @@index([receivedById])
+  @@map("transfer_records")
+}
+
+// ─── Rooms ────────────────────────────────────────────────────────────────────
+
+model Room {
+  id          String   @id
+  password    String
+  hostUserId  String?
+  isMultiPeer Boolean  @default(false)
+  maxPeers    Int      @default(2)
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  host User? @relation("UserRooms", fields: [hostUserId], references: [id], onDelete: Cascade)
+
+  @@index([hostUserId])
+  @@map("rooms")
+}
