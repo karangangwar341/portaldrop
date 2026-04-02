@@ -25,7 +25,7 @@ export async function generateKeyPair(): Promise<KeyPair> {
 
 export async function exportPublicKey(key: CryptoKey): Promise<string> {
   const raw = await crypto.subtle.exportKey("raw", key);
-  return btoa(String.fromCharCode(...new Uint8Array(raw)));
+  return btoa(String.fromCharCode(...Array.from(new Uint8Array(raw))));
 }
 
 export async function importPublicKey(b64: string): Promise<CryptoKey> {
@@ -52,7 +52,7 @@ export async function encryptChunk(key: CryptoKey, data: ArrayBuffer): Promise<{
 }
 
 export async function decryptChunk(key: CryptoKey, iv: Uint8Array, ciphertext: ArrayBuffer): Promise<ArrayBuffer> {
-  return crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+  return crypto.subtle.decrypt({ name: "AES-GCM", iv } as unknown as AlgorithmIdentifier, key, ciphertext) as Promise<ArrayBuffer>;
 }
 
 /** Packs IV + ciphertext into a single ArrayBuffer for transmission */
