@@ -42,8 +42,8 @@ io.on("connection", socket => {
 // ── Background jobs ────────────────────────────────────────────────────────
 
 // Clean up expired in-memory rooms every 60s
-setInterval(() => {
-  const n = roomManager.cleanExpiredRooms();
+setInterval(async () => {
+  const n = await roomManager.cleanExpiredRooms();
   if (n > 0) console.log(`[Rooms] Cleaned ${n} expired room(s)`);
 }, 60_000);
 
